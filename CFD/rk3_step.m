@@ -1,4 +1,4 @@
-function U = rk3_step(U, dt, Lfunc)
+ function U = rk3_step(U, dt, Lfunc)
 U0 = U;
 L1 = Lfunc(U0);
 U(:,2:end-1) = U0(:,2:end-1) - dt * L1;

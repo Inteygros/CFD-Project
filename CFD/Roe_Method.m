@@ -1,4 +1,4 @@
-function U_ = RoeMethod(UL, UR, gamma)
+function U_ = Roe_Method(UL, UR, gamma)
 [~,N]=size(UL);
 U_ = zeros(3,N);
 for i = 1:N
