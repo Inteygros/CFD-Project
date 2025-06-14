@@ -1,41 +1,55 @@
 function LU = LU(U, gamma, dx, FVSfun, FDSfun, TVDLimitersfun, GVCscheme, WENOscheme, UsingCharacteristicReconstruction, Option1, Option2)
 [~, N] = size(U);
 LU = zeros(3, N-2);
+Flux = zeros(3, N-1);
 
-if (Option2==1)
+if Option2==1
     %使用FVS方法
+    Fplus=zeros(3,N);
+    Fminus=zeros(3,N);
+    for i = 1:N
+        [Fplus(:, i), Fminus(:, i)] = FVSfun(U(:, i), gamma);
+    end
+    FL = zeros(3, N-1);
+    FR = zeros(3, N-1);
+    
     if UsingCharacteristicReconstruction %使用特征重构
         % Roe 平均状态
         U_ = Roe_Method(U(:,1:N-1), U(:,2:N), gamma);
         Rcell = cell(1, N-1);
-        WL = zeros(3, N-1);
-        WR = zeros(3, N-1);
         
         for i = 2:N-2
             % Roe 平均状态的特征基
             [L, R] = Eigen_LR(U_(:, i), gamma);
             
-            % 投影到特征空间（Roe 基底）
-            W1 = L * U(:, i-1);
-            W2 = L * U(:, i);
-            W3 = L * U(:, i+1);
-            W4 = L * U(:, i+2);
+            % 投影到特征空间
+            f1plus = L * Fplus(:, i-1);
+            f1minus = L * Fminus(:, i-1);
+            f2plus = L * Fplus(:, i);
+            f2minus = L * Fminus(:, i);
+            f3plus = L * Fplus(:, i+1);
+            f3minus = L * Fminus(:, i+1);
+            f4plus = L * Fplus(:, i+2);
+            f4minus = L * Fminus(:, i+2);
             if i==2
-                W0 = W1;
+                f0plus = f1plus;
             else
-                W0 = L * U(:, i-2);
+                f0plus = L * Fplus(:,i-2);
             end
             if i==N-2
-                W5 = W4;
+                f5minus = f4minus;
             else
-                W5 = L * U(:, i+3);
+                f5minus = L * Fminus(:,i+3);
             end
-            if Option1==1
-                [WL(:, i), WR(:, i)] = TVD_Format(W1, W2, W3, W4, TVDLimitersfun);
-            elseif Option1==2
-                [WL(:, i), WR(:, i)] = GVCscheme(W0, W1, W2, W3, W4, W5);
-            elseif Option1==3
-                [WL(:, i), WR(:, i)] = WENOscheme(W0, W1, W2, W3, W4, W5);
+            if Option1==1 % TVD
+                FL(:,i) = TVD_Format(f1plus, f2plus, f3plus, TVDLimitersfun, 1);
+                FR(:,i) = TVD_Format(f2minus, f3minus, f4minus, TVDLimitersfun, -1);
+            elseif Option1==2 % GVC
+                FL(:,i) = GVCscheme(f1plus, f2plus, f3plus, 1);
+                FR(:,i) = GVCscheme(f2minus, f3minus, f4minus, -1);
+            elseif Option1==3 % WENO
+                FL(:,i) = WENOscheme(f0plus, f1plus, f2plus, f3plus, f4plus);
+                FR(:,i) = WENOscheme(f5minus, f4minus, f3minus, f2minus, f1minus);
             end
             % 存储R
             Rcell{i} = R;
@@ -44,43 +58,90 @@ if (Option2==1)
         % 边界点处理（用原始值）
         [~, Rcell{1}] = Eigen_LR(U_(:, 1), gamma);
         [~, Rcell{N-1}] = Eigen_LR(U_(:, N-1), gamma);
-        WL(:,1) = WL(:,2);
-        WR(:,1) = WR(:,2);
-        WR(:,N-1) = WR(:,N-2);
-        WL(:,N-1) = WL(:,N-2);
+        FL(:,1) = FL(:,2);
+        FR(:,1) = FR(:,2);
+        FR(:,N-1) = FR(:,N-2);
+        FL(:,N-1) = FL(:,N-2);
         
+        % 计算LU
+        for i = 1:N-1
+            Flux(:,i) = Rcell{i}*(FL(:,i)+FR(:,i));
+        end
         for i = 1:N-2
-            [~,~, Aplus1, Aminus1] = FVSfun(U_(:, i+1), gamma);
-            [~,~, Aplus2, Aminus2] = FVSfun(U_(:, i), gamma);
-            
-            R1 = Rcell{i+1};
-            R2 = Rcell{i};
-            
-            Fplus1  = R1 * Aplus1  * WL(:, i+1);
-            Fminus1 = R1 * Aminus1 * WR(:, i+1);
-            Fplus2  = R2 * Aplus2  * WL(:, i);
-            Fminus2 = R2 * Aminus2 * WR(:, i);
-            
-            LU(:, i) = (Fplus1 + Fminus1 - Fplus2 - Fminus2)/dx;
+            LU(:, i) = (Flux(:,i+1) - Flux(:,i))/dx;
         end
         
-    else
-        [UL, UR] = U_Reconstraction(U, TVDLimitersfun, GVCscheme, WENOscheme, Option1);
-        for i = 1:N-2
-            [Fplus1, ~, ~, ~] = FVSfun(UL(:, i+1), gamma);
-            [Fplus2, ~, ~, ~] = FVSfun(UL(:, i), gamma);
-            [~, Fminus1, ~, ~] = FVSfun(UR(:, i+1), gamma);
-            [~, Fminus2, ~, ~] = FVSfun(UR(:, i), gamma);
-            LU(:, i) = (Fplus1 + Fminus1 - Fplus2 - Fminus2)/dx;
+    else %不使用特征重构
+        for i = 2:N-2
+            if i==2
+                f0plus = Fplus(:,i-1);
+            else
+                f0plus = Fplus(:,i-2);
+            end
+            if i==N-2
+                f5minus = Fminus(:,i+2);
+            else
+                f5minus = Fminus(:,i+3);
+            end
+            if Option1==1 % TVD
+                FL(:,i) = TVD_Format(Fplus(:,i-1), Fplus(:,i), Fplus(:,i+1), TVDLimitersfun, 1);
+                FR(:,i) = TVD_Format(Fminus(:,i), Fminus(:,i+1), Fminus(:,i+2), TVDLimitersfun, -1);
+            elseif Option1==2 % GVC
+                FL(:,i) = GVCscheme(Fplus(:,i-1), Fplus(:,i), Fplus(:,i+1), 1);
+                FR(:,i) = GVCscheme(Fminus(:,i), Fminus(:,i+1), Fminus(:,i+2), -1);
+            elseif Option1==3 % WENO
+                FL(:,i) = WENOscheme(f0plus, Fplus(:,i-1), Fplus(:,i), Fplus(:,i+1), Fplus(:,i+2));
+                FR(:,i) = WENOscheme(f5minus, Fminus(:,i+2), Fminus(:,i+1), Fminus(:,i), Fminus(:,i-1));
+            end
+        end
+        %处理边界
+        FL(:,1)=FL(:,2);
+        FR(:,1)=FR(:,2);
+        FL(:,N-1)=FL(:,N-2);
+        FR(:,N-1)=FR(:,N-2);
+        Flux=FL+FR;
+    end
+    for i = 1:N-2
+        LU(:, i) = (Flux(:,i+1) - Flux(:,i))/dx;
+    end
+end
+
+if Option2==2
+    %使用FDS方法
+    UL = zeros(3, N-1);
+    UR = zeros(3, N-1);
+    for i = 2:N-2
+        if i==2
+            U0 = U(:,i-1);
+        else
+            U0 = U(:,i-2);
+        end
+        if i==N-2
+            U5 = U(:,i+2);
+        else
+            U5 = U(:,i+3);
+        end
+        if Option1==1 % TVD
+            UL(:,i) = TVD_Format(U(:,i-1), U(:,i), U(:,i+1), TVDLimitersfun, 1);
+            UR(:,i) = TVD_Format(U(:,i), U(:,i+1), U(:,i+2), TVDLimitersfun, -1);
+        elseif Option1==2 % GVC
+            UL(:,i) = GVCscheme(U(:,i-1), U(:,i), U(:,i+1), 1);
+            UR(:,i) = GVCscheme(U(:,i), U(:,i+1), U(:,i+2), -1);
+        elseif Option1==3 % WENO
+            UL(:,i) = WENOscheme(U0, U(:,i-1), U(:,i), U(:,i+1), U(:,i+2));
+            UR(:,i) = WENOscheme(U5, U(:,i+2), U(:,i+1), U(:,i), U(:,i-1));
         end
     end
-else
-    %使用FDS方法
-    [UL, UR] = U_Reconstraction(U, TVDLimitersfun, GVCscheme, WENOscheme, Option1);
+    UL(:,1)=UL(:,2);
+    UR(:,1)=UR(:,2);
+    UL(:,N-1)=UL(:,N-2);
+    UR(:,N-1)=UR(:,N-2);
+    for i = 1:N-1
+        Flux(:, i) = FDSfun(UL(:, i), UR(:, i), gamma);
+    end
+    
     for i = 1:N-2
-        F1 = FDSfun(UL(:, i+1), UR(:, i+1), gamma);
-        F2 = FDSfun(UL(:, i), UR(:, i), gamma);
-        LU(:, i) = (F1 - F2)/dx;
+        LU(:, i) = (Flux(:,i+1) - Flux(:,i))/dx;
     end
 end
 end
