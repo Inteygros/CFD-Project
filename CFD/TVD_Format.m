@@ -1,7 +1,13 @@
-function f = TVD_Format(f1, f2, f3, TVDLimitersfun, sig)
+function f = TVD_Format(f1, f2, f3, TVDLimitersfun, c, sig)
 f = zeros(3,1);
-small = 1e-6;
-r = (f2 - f1) ./ (f3 - f2 + small);
-phi = TVDLimitersfun(r);
-f = f2 + (sig / 2) * phi .* (f3 - f2);
+small = 1e-10;
+if sig>0
+    r = (f2 - f1) ./ (f3 - f2 + small);
+    phi = TVDLimitersfun(r);
+    f = f2 + 1 / 2 * phi .* (1-c) .*(f3 - f2);
+else
+    r = (f3 - f2) ./ (f2 - f1 + small);
+    phi = TVDLimitersfun(r);
+    f = f2 - 1 / 2 * phi .* (1+c) .*(f2 - f1);
+end
 end

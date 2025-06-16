@@ -1,7 +1,9 @@
-function LU = LU(U, gamma, dx, FVSfun, FDSfun, TVDLimitersfun, GVCscheme, WENOscheme, UsingCharacteristicReconstruction, Option1, Option2)
+function LU = LU(U, gamma, dx, dt, FVSfun, FDSfun, TVDLimitersfun, GVCscheme, WENOscheme, UsingCharacteristicReconstruction, Option1, Option2)
 [~, N] = size(U);
 LU = zeros(3, N-2);
 Flux = zeros(3, N-1);
+% Roe 平均状态
+U_ = Roe_Method(U(:,1:N-1), U(:,2:N), gamma);
 
 if Option2==1
     %使用FVS方法
@@ -14,8 +16,7 @@ if Option2==1
     FR = zeros(3, N-1);
     
     if UsingCharacteristicReconstruction %使用特征重构
-        % Roe 平均状态
-        U_ = Roe_Method(U(:,1:N-1), U(:,2:N), gamma);
+
         Rcell = cell(1, N-1);
         
         for i = 2:N-2
@@ -42,8 +43,16 @@ if Option2==1
                 f5minus = L * Fminus(:,i+3);
             end
             if Option1==1 % TVD
-                FL(:,i) = TVD_Format(f1plus, f2plus, f3plus, TVDLimitersfun, 1);
-                FR(:,i) = TVD_Format(f2minus, f3minus, f4minus, TVDLimitersfun, -1);
+                [~, u, ~, c] = conservative_to_primitive(U_(:,i), gamma);
+                lambda1 = u; lambda2 = u+c; lambda3 = u-c;
+                cp = dt/dx*[(lambda1+sqrt(lambda1^2+1e-10))/2;
+                    (lambda2+sqrt(lambda2^2+1e-10))/2;
+                    (lambda3+sqrt(lambda3^2+1e-10))/2];
+                cm = dt/dx*[(lambda1-sqrt(lambda1^2+1e-10))/2;
+                    (lambda2-sqrt(lambda2^2+1e-10))/2;
+                    (lambda3-sqrt(lambda3^2+1e-10))/2];
+                FL(:,i) = TVD_Format(f1plus, f2plus, f3plus, TVDLimitersfun, cp, 1);
+                FR(:,i) = TVD_Format(f2minus, f3minus, f4minus, TVDLimitersfun, cm, -1);
             elseif Option1==2 % GVC
                 FL(:,i) = GVCscheme(f1plus, f2plus, f3plus, 1);
                 FR(:,i) = GVCscheme(f2minus, f3minus, f4minus, -1);
@@ -84,8 +93,16 @@ if Option2==1
                 f5minus = Fminus(:,i+3);
             end
             if Option1==1 % TVD
-                FL(:,i) = TVD_Format(Fplus(:,i-1), Fplus(:,i), Fplus(:,i+1), TVDLimitersfun, 1);
-                FR(:,i) = TVD_Format(Fminus(:,i), Fminus(:,i+1), Fminus(:,i+2), TVDLimitersfun, -1);
+                [~, u, ~, c] = conservative_to_primitive(U_(:,i), gamma);
+                lambda1 = u; lambda2 = u+c; lambda3 = u-c;
+                cp = dt/dx*[(lambda1+sqrt(lambda1^2+1e-10))/2;
+                    (lambda2+sqrt(lambda2^2+1e-10))/2;
+                    (lambda3+sqrt(lambda3^2+1e-10))/2];
+                cm = dt/dx*[(lambda1-sqrt(lambda1^2+1e-10))/2;
+                    (lambda2-sqrt(lambda2^2+1e-10))/2;
+                    (lambda3-sqrt(lambda3^2+1e-10))/2];
+                FL(:,i) = TVD_Format(Fplus(:,i-1), Fplus(:,i), Fplus(:,i+1), TVDLimitersfun, cp, 1);
+                FR(:,i) = TVD_Format(Fminus(:,i), Fminus(:,i+1), Fminus(:,i+2), TVDLimitersfun, cm, -1);
             elseif Option1==2 % GVC
                 FL(:,i) = GVCscheme(Fplus(:,i-1), Fplus(:,i), Fplus(:,i+1), 1);
                 FR(:,i) = GVCscheme(Fminus(:,i), Fminus(:,i+1), Fminus(:,i+2), -1);
@@ -122,8 +139,16 @@ if Option2==2
             U5 = U(:,i+3);
         end
         if Option1==1 % TVD
-            UL(:,i) = TVD_Format(U(:,i-1), U(:,i), U(:,i+1), TVDLimitersfun, 1);
-            UR(:,i) = TVD_Format(U(:,i), U(:,i+1), U(:,i+2), TVDLimitersfun, -1);
+            [~, u, ~, c] = conservative_to_primitive(U_(:,i), gamma);
+                lambda1 = u; lambda2 = u+c; lambda3 = u-c;
+                cp = dt/dx*[(lambda1+sqrt(lambda1^2+1e-6))/2;
+                    (lambda2+sqrt(lambda2^2+1e-6))/2;
+                    (lambda3+sqrt(lambda3^2+1e-6))/2];
+                cm = dt/dx*[(lambda1-sqrt(lambda1^2+1e-6))/2;
+                    (lambda2-sqrt(lambda2^2+1e-6))/2;
+                    (lambda3-sqrt(lambda3^2+1e-6))/2];
+            UL(:,i) = TVD_Format(U(:,i-1), U(:,i), U(:,i+1), TVDLimitersfun,cp, 1);
+            UR(:,i) = TVD_Format(U(:,i), U(:,i+1), U(:,i+2), TVDLimitersfun,cm, -1);
         elseif Option1==2 % GVC
             UL(:,i) = GVCscheme(U(:,i-1), U(:,i), U(:,i+1), 1);
             UR(:,i) = GVCscheme(U(:,i), U(:,i+1), U(:,i+2), -1);
