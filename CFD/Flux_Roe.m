@@ -1,6 +1,10 @@
+% FDS的Roe格式
 function flux = Flux_Roe(UL, UR, gamma)
+% 获取左右状态
 FL = Calculate_F_From_U(UL, gamma);
 FR = Calculate_F_From_U(UR, gamma);
+
+% 计算平均斜率矩阵
 U = Roe_Method(UL, UR, gamma);
 [L, R] = Eigen_LR(U, gamma);
 [~, u, ~, c] = conservative_to_primitive(U, gamma);
@@ -17,5 +21,6 @@ if abs3<delta
     abs3=(abs3^2+delta^2)/2/delta;
 end
 absA = R*diag([abs1, abs2, abs3])*L;
+
 flux = 0.5*(FL+FR-absA*(UR-UL));
 end

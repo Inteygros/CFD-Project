@@ -1,3 +1,4 @@
+% Sod问题精确解
 function U = sod_exact_solution(t, N, gamma)
     x = linspace(-0.5, 0.5, N);
     

@@ -1,3 +1,4 @@
+% 将U转换为原始变量\tho，u，p，并计算c
 function [rho, u, p, c] = conservative_to_primitive(U, gamma)
     rho = U(1,:);
     u = U(2,:)./U(1,:);

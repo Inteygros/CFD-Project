@@ -1,3 +1,4 @@
+% »æÍ¼µÄ³õÊ¼»¯
 function h = init_plot(x, U, gamma, show_exact_solution)
 [rho, u, p, ~] = conservative_to_primitive(U, gamma);
 h = cell(3, 2);

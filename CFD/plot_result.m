@@ -1,3 +1,4 @@
+% 绘图函数
 function plot_result(U, h, gamma, t, N, show_exact_solution)
     % 更新数值解
     [rho, u, p, ~] = conservative_to_primitive(U, gamma);

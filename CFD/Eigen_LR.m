@@ -1,3 +1,4 @@
+% 针对A的LR特征值分解
 function [L, R] = Eigen_LR(U, gamma)
 [rho, u, p, c] = conservative_to_primitive(U, gamma);
 E = U(3);

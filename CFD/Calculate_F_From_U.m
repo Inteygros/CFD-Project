@@ -1,3 +1,4 @@
+% 计算U对应的F
 function F = Calculate_F_From_U(U,gamma)
 F=zeros(3,1);
 F(1)=U(2);
