@@ -5,9 +5,9 @@ Fplus = zeros(3,1); Fminus = zeros(3,1);
 lambda1 = u; lambda2 = u+c; lambda3 = u-c;
 
 % 分解成正、负特征值
-lambda1p = (lambda1+sqrt(lambda1^2+1e-10))/2; lambda1m = (lambda1-sqrt(lambda1^2+1e-10))/2;
-lambda2p = (lambda2+sqrt(lambda2^2+1e-10))/2; lambda2m = (lambda2-sqrt(lambda2^2+1e-10))/2;
-lambda3p = (lambda3+sqrt(lambda3^2+1e-10))/2; lambda3m = (lambda3-sqrt(lambda3^2+1e-10))/2;
+lambda1p = (lambda1+sqrt(lambda1^2+1e-16))/2; lambda1m = (lambda1-sqrt(lambda1^2+1e-16))/2;
+lambda2p = (lambda2+sqrt(lambda2^2+1e-16))/2; lambda2m = (lambda2-sqrt(lambda2^2+1e-16))/2;
+lambda3p = (lambda3+sqrt(lambda3^2+1e-16))/2; lambda3m = (lambda3-sqrt(lambda3^2+1e-16))/2;
 
 % 计算正、负通量
 Fplus(1) = 2*(gamma-1)*lambda1p+lambda2p+lambda3p;

@@ -49,13 +49,12 @@ if Option2==1
                 % 计算TVD公式里用到的参数c+-（不要与声速混淆）
                 [~, u, ~, c] = conservative_to_primitive(U_(:,i), gamma);
                 lambda1 = u; lambda2 = u+c; lambda3 = u-c;
-                cp = dt/dx*[(lambda1+sqrt(lambda1^2+1e-10))/2;
-                    (lambda2+sqrt(lambda2^2+1e-10))/2;
-                    (lambda3+sqrt(lambda3^2+1e-10))/2];
-                cm = dt/dx*[(lambda1-sqrt(lambda1^2+1e-10))/2;
-                    (lambda2-sqrt(lambda2^2+1e-10))/2;
-                    (lambda3-sqrt(lambda3^2+1e-10))/2];
-                
+                cp = dt/dx*[(lambda1+sqrt(lambda1^2+1e-16))/2;
+                    (lambda2+sqrt(lambda2^2+1e-16))/2;
+                    (lambda3+sqrt(lambda3^2+1e-16))/2];
+                cm = dt/dx*[(lambda1-sqrt(lambda1^2+1e-16))/2;
+                    (lambda2-sqrt(lambda2^2+1e-16))/2;
+                    (lambda3-sqrt(lambda3^2+1e-16))/2];
                 FL(:,i) = TVD_Format(f1plus, f2plus, f3plus, TVDLimitersfun, cp, 1);
                 FR(:,i) = TVD_Format(f2minus, f3minus, f4minus, TVDLimitersfun, cm, -1);
             elseif Option1==2 % GVC格式
@@ -98,12 +97,12 @@ if Option2==1
             if Option1==1 % TVD，同上
                 [~, u, ~, c] = conservative_to_primitive(U_(:,i), gamma);
                 lambda1 = u; lambda2 = u+c; lambda3 = u-c;
-                cp = dt/dx*[(lambda1+sqrt(lambda1^2+1e-10))/2;
-                    (lambda2+sqrt(lambda2^2+1e-10))/2;
-                    (lambda3+sqrt(lambda3^2+1e-10))/2];
-                cm = dt/dx*[(lambda1-sqrt(lambda1^2+1e-10))/2;
-                    (lambda2-sqrt(lambda2^2+1e-10))/2;
-                    (lambda3-sqrt(lambda3^2+1e-10))/2];
+                cp = dt/dx*[(lambda1+sqrt(lambda1^2+1e-16))/2;
+                    (lambda2+sqrt(lambda2^2+1e-16))/2;
+                    (lambda3+sqrt(lambda3^2+1e-16))/2];
+                cm = dt/dx*[(lambda1-sqrt(lambda1^2+1e-16))/2;
+                    (lambda2-sqrt(lambda2^2+1e-16))/2;
+                    (lambda3-sqrt(lambda3^2+1e-16))/2];
                 FL(:,i) = TVD_Format(Fplus(:,i-1), Fplus(:,i), Fplus(:,i+1), TVDLimitersfun, cp, 1);
                 FR(:,i) = TVD_Format(Fminus(:,i), Fminus(:,i+1), Fminus(:,i+2), TVDLimitersfun, cm, -1);
             elseif Option1==2 % GVC
@@ -128,6 +127,8 @@ end
 
 if Option2==2
     %使用FDS方法
+    
+    %将激波捕捉格式的方法类似地引入到Roe格式
     %UL = zeros(3, N-1);
     %UR = zeros(3, N-1);
     %for i = 2:N-2
@@ -167,6 +168,7 @@ if Option2==2
     
     UL = U(:, 1:N-1);
     UR = U(:, 2:N);
+    
     for i = 1:N-1
         Flux(:, i) = FDSfun(UL(:, i), UR(:, i), gamma);
     end

@@ -1,7 +1,6 @@
 % TVD格式
 function f = TVD_Format(f1, f2, f3, TVDLimitersfun, c, sig)
-f = zeros(3,1);
-small = 1e-10;
+small = 1e-16;
 if sig>0 % 正通量
     r = (f2 - f1) ./ (f3 - f2 + small);
     phi = TVDLimitersfun(r);
